@@ -8,7 +8,7 @@ import os
 from flask_migrate import Migrate
 from flask_login import current_user
 from sqlalchemy import func
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import io
 import base64
 from datetime import datetime
