@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Search Results</h1>
+    {% for user in users %}
+        <div class="user-result">
+            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_picture) }}" alt="{{ user.username }}'s profile picture">
+            <h2><a href="{{ url_for('profile', username=user.username) }}">{{ user.unique_name }}</a></h2>
+            <p>{{ user.bio }}</p>
+        </div>
+    {% endfor %}
+{% endblock %}

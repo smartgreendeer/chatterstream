@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Notifications</h1>
+    {% if notifications %}
+        {% for notification in notifications %}
+            <div class="notification {% if not notification.read %}unread{% endif %}">
+                <p>{{ notification.message }}</p>
+                <small>{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No notifications yet.</p>
+    {% endif %}
+{% endblock %}

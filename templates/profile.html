@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>{{ user.username }}'s Profile</h1>
+    
+    <div class="profile-info">
+        <h1>{{ user.username }}</h1>
+        <p>{{ user.bio }}</p>
+        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_picture) }}" alt="{{ user.username }}'s profile picture">
+        <p>Unique Name: {{ user.unique_name }}</p>
+        <p>Bio: {{ user.bio }}</p>
+        <p>Gender: {{ user.gender }}</p>
+        <p>Joined: {{ user.date_joined.strftime('%Y-%m-%d') }}</p>
+        <p>Followers: {{ user.followers.count() }} | Following: {{ user.following.count() }}</p>
+        {% if user != current_user %}
+        <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">Edit Profile</a>
+        <a href="{{ url_for('user_activity') }}" class="btn btn-info">View Activity</a>
+            {% if current_user.is_following(user) %}
+                <a href="{{ url_for('unfollow', username=user.username) }}" class="btn">Unfollow</a>
+            {% else %}
+                <a href="{{ url_for('follow', username=user.username) }}" class="btn">Follow</a>
+            {% endif %}
+        {% endif %}
+    </div>
+    
+    <h2>Goals</h2>
+    {% for goal in goals %}
+        <div class="goal {% if goal.completed %}completed{% endif %}">
+            <h3>{{ goal.title }}</h3>
+            <p>{{ goal.description }}</p>
+            <div class="goal-meta">
+                Deadline: {{ goal.deadline.strftime('%Y-%m-%d') }}
+                {% if not goal.completed and user == current_user %}
+                    <a href="{{ url_for('complete_goal', goal_id=goal.id) }}" class="btn-complete">Mark as Completed</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+    
+    <h2>Posts</h2>
+    {% for post in posts %}
+        <div class="post">
+            {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post image" class="post-image">
+            {% endif %}
+            
+            <p>{{ post.content }}</p>
+            
+            <div class="post-meta">
+                Posted on: {{ post.date_posted.strftime('%Y-%m-%d %H:%M') }}
+            </div>
+            
+            {% if post.author == current_user %}
+                <form action="{{ url_for('delete_post', post_id=post.id) }}" method="post">
+                    <button type="submit" class="btn-delete">Delete Post</button>
+                </form>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endblock %}

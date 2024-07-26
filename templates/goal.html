@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Set a New Goal</h2>
+    <form method="POST">
+        <input type="text" name="title" placeholder="Goal Title" required>
+        <textarea name="description" placeholder="Goal Description" required></textarea>
+        <input type="date" name="deadline" required>
+        <input type="submit" value="Set Goal">
+    </form>
+{% endblock %}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Mastery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">Life Mastery</a>
+            <ul>
+                <li><a href="{{ url_for('home') }}"><i class="fas fa-home icon"></i><span class="sr-only">Home</span></a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('profile', username=current_user.username) }}"><i class="fas fa-user icon"></i><span class="sr-only">Profile</span></a></li>
+                    <li><a href="{{ url_for('notifications') }}"><i class="fas fa-bell icon"></i><span class="sr-only">Notifications</span></a></li>
+                    <li><a href="{{ url_for('post') }}"><i class="fas fa-plus-circle icon"></i><span class="sr-only">New Post</span></a></li>
+                    <li><a href="{{ url_for('goal') }}"><i class="fas fa-bullseye icon"></i><span class="sr-only">New Goal</span></a></li>
+                    <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt icon"></i><span class="sr-only">Logout</span></a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt icon"></i><span class="sr-only">Login</span></a></li>
+                    <li><a href="{{ url_for('signup') }}"><i class="fas fa-user-plus icon"></i><span class="sr-only">Sign Up</span></a></li>
+                {% endif %}
+            </ul>
+            <form action="{{ url_for('search') }}" method="GET" class="search-form">
+                <input type="text" name="q" placeholder="Search..." class="search-input">
+                <button type="submit" class="search-button"><i class="fas fa-search"></i></button>
+            </form>
+            <button class="theme-toggle" id="theme-toggle">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Life Mastery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-theme');
+            const icon = themeToggle.querySelector('i');
+            icon.classList.toggle('fa-moon');
+            icon.classList.toggle('fa-sun');
+        });
+    </script>
+</body>
+</html>
