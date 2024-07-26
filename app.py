@@ -409,22 +409,6 @@ def user_activity():
         'likes': len(likes)
     }
 
-    # Create a bar chart
-    plt.figure(figsize=(10, 5))
-    plt.bar(activity_data.keys(), activity_data.values())
-    plt.title('User Activity')
-    plt.xlabel('Activity Type')
-    plt.ylabel('Count')
-
-    # Save the plot to a BytesIO object
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    
-    # Encode the image to base64
-    graph_url = base64.b64encode(img.getvalue()).decode()
-
-    return render_template('user_activity.html', graph_url=graph_url)
 
 if __name__ == '__main__':
     with app.app_context():
