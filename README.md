@@ -24,11 +24,6 @@ LifeMastery is a web application designed to help users manage and achieve their
     cd lifemastery
     ```
 
-2. Create a virtual environment:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate 
-    ```
 
 3. Install the dependencies:
     ```bash
@@ -85,6 +80,10 @@ LifeMastery is a web application designed to help users manage and achieve their
 ### User Activity
 
 - **Activity Visualization**: View a chart of your activity, including the number of posts, comments, and likes.
+
+- **link to active and deployed site**: 
+- **link to documentation**: https://docs.google.com/document/d/14Za6JdcG2XYrzq7eRQre_wSoL27YIArBb2H700CCRSY/edit?usp=sharing
+
 
 
 
