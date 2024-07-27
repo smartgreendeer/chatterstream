@@ -2,11 +2,10 @@
 {% block content %}
     <h1>Welcome to Life Mastery</h1>
     
+    <h2>Posts from people you follow</h2>
     {% for post in posts %}
         <div class="post">
             <h3>{{ post.title }}</h3>
-            <p>{{ post.content }}</p>
-            <p>Posted by: <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a></p>
             {% if post.image %}
                 <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post image" class="post-image">
             {% endif %}
@@ -49,5 +48,57 @@
                 <button type="submit">Comment</button>
             </form>
         </div>
+    {% else %}
+        <p>No posts from followed users yet.</p>
+    {% endfor %}
+
+    <h2>Suggested Posts</h2>
+    {% for post in suggested_posts %}
+        <div class="post">
+            <h3>{{ post.title }}</h3>
+            {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post image" class="post-image">
+            {% endif %}
+            
+            <p>{{ post.content }}</p>
+            
+            <div class="post-meta">
+                Posted by: <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a> on {{ post.date_posted.strftime('%Y-%m-%d %H:%M') }}
+            </div>
+            
+            <div class="post-actions">
+                <form action="{{ url_for('like', post_id=post.id) }}" method="post">
+                    <button type="submit">
+                        {% if current_user.id in post.likes|map(attribute='user_id')|list %}
+                            Unlike💔
+                        {% else %}
+                            Like❤️
+                        {% endif %}
+                    </button>
+                </form>
+                <span>{{ post.likes|length }} likes</span>
+            </div>
+            
+            <div class="comments">
+                {% for comment in post.comments %}
+                    <div class="comment">
+                        <p>{{ comment.content }}</p>
+                        <small>{{ comment.author.username }} - {{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+                        {% if comment.author == current_user %}
+                            <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="post">
+                                <button type="submit" class="btn-delete">Delete</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <form action="{{ url_for('comment', post_id=post.id) }}" method="post">
+                <textarea name="content" required></textarea>
+                <button type="submit">Comment</button>
+            </form>
+        </div>
+    {% else %}
+        <p>No suggested posts available.</p>
     {% endfor %}
 {% endblock %}

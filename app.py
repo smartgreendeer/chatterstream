@@ -60,8 +60,16 @@ class User(UserMixin, db.Model):
     goals = db.relationship('Goal', backref='user', lazy=True)
     likes = db.relationship('Like', backref='user', lazy=True)
     comments = db.relationship('Comment', backref='author', lazy=True)
-    followers = db.relationship('Follow', foreign_keys='Follow.followed_id', backref='followed', lazy='dynamic')
-    following = db.relationship('Follow', foreign_keys='Follow.follower_id', backref='follower', lazy='dynamic')
+    following = db.relationship('Follow',
+                                foreign_keys=[Follow.follower_id],
+                                backref=db.backref('follower', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')
+    followers = db.relationship('Follow',
+                                foreign_keys=[Follow.followed_id],
+                                backref=db.backref('followed', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
     daily_usage = db.Column(db.Float, default=0)
 
@@ -285,7 +293,6 @@ def follow(username):
         return redirect(url_for('profile', username=username))
     current_user.follow(user)
     db.session.commit()
-    notify_user(user, f"{current_user.username} started following you.")
     flash(f'You are now following {username}!', 'success')
     return redirect(url_for('profile', username=username))
 
