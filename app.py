@@ -211,7 +211,7 @@ def home():
     if current_user.is_authenticated:
         page = request.args.get('page', 1, type=int)
         posts_per_page = 10
-        followed_users = [user.id for user in current_user.following]
+        followed_users = [follow.followed_id for follow in current_user.following]
         followed_users.append(current_user.id)
         posts = Post.query.filter(Post.user_id.in_(followed_users))\
                           .filter_by(approved=True)\
