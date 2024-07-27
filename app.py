@@ -106,6 +106,7 @@ class CommentLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+    
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=True)
@@ -208,21 +209,39 @@ def update_usage():
 @app.route('/')
 def home():
     if current_user.is_authenticated:
+        page = request.args.get('page', 1, type=int)
+        posts_per_page = 10
         followed_users = [user.id for user in current_user.following]
         followed_users.append(current_user.id)
         posts = Post.query.filter(Post.user_id.in_(followed_users))\
                           .filter_by(approved=True)\
                           .order_by(Post.date_posted.desc())\
-                          .all()
+                          .paginate(page=page, per_page=posts_per_page)
+        
         suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users))\
                                     .filter_by(approved=True)\
                                     .order_by(func.random())\
                                     .limit(5)\
                                     .all()
         
-        return render_template('home.html', posts=posts, suggested_posts=suggested_posts)
+        return render_template('home.html', posts=posts.items, page=posts, suggested_posts=suggested_posts)
     else:
         return redirect(url_for('login'))
+
+@app.route('/suggested_posts')
+@login_required
+def suggested_posts():
+    user_interests = set(current_user.interests.split(','))
+    suggested_posts = Post.query.filter(Post.user_id != current_user.id)\
+                                .filter_by(approved=True)\
+                                .order_by(func.random())\
+                                .limit(20)\
+                                .all()
+    
+    # Filter posts based on shared interests
+    filtered_posts = [post for post in suggested_posts if set(post.hashtags.split()).intersection(user_interests)]
+    
+    return render_template('suggested_posts.html', suggested_posts=filtered_posts[:10])
 
 @app.route('/profile/<username>')
 @login_required
@@ -290,6 +309,7 @@ def follow(username):
         return redirect(url_for('profile', username=username))
     current_user.follow(user)
     db.session.commit()
+    notify_user(user, f"{current_user.username} started following you.")
     flash(f'You are now following {username}!', 'success')
     return redirect(url_for('profile', username=username))
 
