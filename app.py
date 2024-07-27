@@ -17,7 +17,9 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, SelectField, FileField
 from wtforms.validators import DataRequired, Email, Length
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
@@ -339,14 +341,19 @@ def dashboard():
 @login_required
 def post():
     if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-        hashtags = request.form['hashtags']
-        file = request.files['image']
+        title = request.form.get('title', '')
+        content = request.form.get('content', '')
+        hashtags = request.form.get('hashtags', '')
         
+        if not title:
+            flash('Title is required', 'error')
+            return render_template('post.html')
+
         if not moderate_content(title) or not moderate_content(content):
             flash('Your post may violate community guidelines. Please review and revise your content.', 'error')
             return render_template('post.html', title=title, content=content, hashtags=hashtags)
+        
+        file = request.files.get('image')
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -438,6 +445,10 @@ def user_activity():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.drop_all()
-        db.create_all()
+        db_url = app.config['SQLALCHEMY_DATABASE_URI']
+        if db_url:
+            db.drop_all()
+            db.create_all()
+        else:
+            print("WARNING: Database URL is not set. Skipping db operations.")
     app.run(debug=True)
