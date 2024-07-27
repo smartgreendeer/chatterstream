@@ -53,13 +53,7 @@ class User(UserMixin, db.Model):
     followers = db.relationship('Follow', foreign_keys='Follow.followed_id', backref='followed', lazy='dynamic')
     following = db.relationship('Follow', foreign_keys='Follow.follower_id', backref='follower', lazy='dynamic')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
-    gender = db.Column(db.String(20))
-    pronouns = db.Column(db.String(30))
-    display_name = db.Column(db.String(50))
-    profile_picture = db.Column(db.String(20), default='default.jpg')
-    location = db.Column(db.String(100))
-    website = db.Column(db.String(200))
-    interests = db.Column(db.String(200))
+    daily_usage = db.Column(db.Float, default=0)
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}', '{self.profile_picture}')"
@@ -94,6 +88,8 @@ class Post(db.Model):
     approved = db.Column(db.Boolean, default=False, nullable=False)
     likes = db.relationship('Like', backref='post', lazy=True)
     comments = db.relationship('Comment', backref='post', lazy=True)
+    title = db.Column(db.String(100), nullable=False)
+    hashtags = db.Column(db.String(200))
     
 class Goal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -168,6 +164,14 @@ def save_picture(form_picture):
     
     return picture_fn
 
+@app.route('/update_usage', methods=['POST'])
+@login_required
+def update_usage():
+    hours = float(request.form['hours'])
+    current_user.daily_usage = hours
+    db.session.commit()
+    return redirect(url_for('profile', username=current_user.username))
+
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -179,32 +183,34 @@ def home():
         return redirect(url_for('login'))
 
 @app.route('/profile/<username>')
+@login_required
 def profile(username):
     user = User.query.filter_by(username=username).first_or_404()
     posts = Post.query.filter_by(user_id=user.id).order_by(Post.date_posted.desc()).all()
     goals = Goal.query.filter_by(user_id=user.id).order_by(Goal.deadline).all()
-    return render_template('profile.html', user=user, posts=posts, goals=goals)
+    form = EditProfileForm(obj=user)
+    return render_template('profile.html', user=user, posts=posts, goals=goals, form=form)
 
-@app.route('/edit_profile', methods=['GET', 'POST'])
+@app.route('/edit_profile', methods=['POST'])
 @login_required
 def edit_profile():
-    if request.method == 'POST':
-        if 'profile_picture' in request.files:
-            file = request.files['profile_picture']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                current_user.profile_picture = filename
-
-        current_user.bio = request.form['bio']
-        current_user.gender = request.form['gender']
-        current_user.unique_name = request.form['unique_name']
-
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        if form.profile_picture.data:
+            picture_file = save_picture(form.profile_picture.data)
+            current_user.profile_picture = picture_file
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        current_user.bio = form.bio.data
+        current_user.gender = form.gender.data
+        current_user.pronouns = form.pronouns.data
+        current_user.display_name = form.display_name.data
+        current_user.location = form.location.data
+        current_user.website = form.website.data
+        current_user.interests = form.interests.data
         db.session.commit()
         flash('Your profile has been updated!', 'success')
-        return redirect(url_for('profile', username=current_user.username))
-
-    return render_template('edit_profile.html', title='Edit Profile')
+    return redirect(url_for('profile', username=current_user.username))
 
 @app.route('/search')
 def search():
@@ -315,19 +321,21 @@ def dashboard():
 @login_required
 def post():
     if request.method == 'POST':
+        title = request.form['title']
         content = request.form['content']
+        hashtags = request.form['hashtags']
         file = request.files['image']
         
-        if not moderate_content(content):
+        if not moderate_content(title) or not moderate_content(content):
             flash('Your post contains inappropriate content and cannot be submitted', 'error')
             return redirect(url_for('post'))
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            new_post = Post(content=content, image=filename, user_id=current_user.id, approved=True)
+            new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
         else:
-            new_post = Post(content=content, user_id=current_user.id, approved=True)
+            new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id, approved=True)
         
         db.session.add(new_post)
         db.session.commit()
@@ -376,7 +384,7 @@ def goal():
         db.session.add(new_goal)
         db.session.commit()
         flash('New goal added successfully', 'success')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('home'))
     return render_template('goal.html')
 
 @app.route('/complete_goal/<int:goal_id>')
@@ -388,7 +396,7 @@ def complete_goal(goal_id):
     goal.completed = True
     db.session.commit()
     flash('Goal marked as completed', 'success')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('home'))
 
 @app.route('/notifications')
 @login_required

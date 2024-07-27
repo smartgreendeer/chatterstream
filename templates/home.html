@@ -18,9 +18,9 @@
                 <form action="{{ url_for('like', post_id=post.id) }}" method="post">
                     <button type="submit">
                         {% if current_user.id in post.likes|map(attribute='user_id')|list %}
-                            Unlike
+                            Unlike💔
                         {% else %}
-                            Like
+                            Like❤️
                         {% endif %}
                     </button>
                 </form>

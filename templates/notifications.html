@@ -1,12 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
     <h1>Notifications</h1>
+    <div class="notification-filter">
+        <select id="notificationFilter">
+            <option value="all">All</option>
+            <option value="like">Likes</option>
+            <option value="comment">Comments</option>
+            <option value="follow">Follows</option>
+        </select>
+    </div>
     {% if notifications %}
         {% for notification in notifications %}
             <div class="notification {% if not notification.read %}unread{% endif %}">
-                <p>{{ notification.message }}</p>
+                <div class="notification {{ notification.type }}">
+                    {{ notification.message }}
+                </div>
                 <small>{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
             </div>
+                        
+            <script>
+            document.getElementById('notificationFilter').addEventListener('change', function() {
+                const filter = this.value;
+                const notifications = document.querySelectorAll('.notification');
+                notifications.forEach(notification => {
+                    if (filter === 'all' || notification.classList.contains(filter)) {
+                        notification.style.display = 'block';
+                    } else {
+                        notification.style.display = 'none';
+                    }
+                });
+            });
+            </script>
         {% endfor %}
     {% else %}
         <p>No notifications yet.</p>

@@ -293,3 +293,32 @@ select {
     flex-grow: 1;
   }
 }
+.follow-section {
+  display: flex;
+  justify-content: space-around;
+  margin: 20px 0;
+}
+
+.follow-item {
+  text-align: center;
+}
+
+.follow-count {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.follow-label {
+  color: #777;
+}
+.site-title {
+  font-size: 2.5em;
+  font-weight: bold;
+  animation: colorChange 5s infinite;
+}
+
+@keyframes colorChange {
+  0% { color: #ff6b6b; }
+  50% { color: #4ecdc4; }
+  100% { color: #ff6b6b; }
+}
