@@ -256,8 +256,6 @@ def profile(username):
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    #if request.args.get('username') != current_user.username:
-     #   abort(403)
         form = EditProfileForm()
         if form.validate_on_submit():
             if form.profile_picture.data:
@@ -382,8 +380,7 @@ def delete_comment(comment_id):
         abort(403)
     db.session.delete(comment)
     db.session.commit()
-    flash('Your comment has been deleted.', 'success')
-    return redirect(url_for('home'))
+    return jsonify({'status': 'success', 'message': 'Comment deleted successfully'})
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -487,15 +484,17 @@ def post():
 def like(post_id):
     post = Post.query.get_or_404(post_id)
     like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+    
     if like:
         db.session.delete(like)
         db.session.commit()
+        return jsonify({'status': 'unliked', 'likes_count': len(post.likes)})
     else:
         new_like = Like(user_id=current_user.id, post_id=post_id)
         db.session.add(new_like)
         db.session.commit()
         notify_user(post.author, f"{current_user.username} liked your post.")
-    return redirect(url_for('home'))
+        return jsonify({'status': 'liked', 'likes_count': len(post.likes)})
 
 @app.route('/comment/<int:post_id>', methods=['POST'])
 @login_required
