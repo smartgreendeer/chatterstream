@@ -8,12 +8,13 @@ import os
 from flask_migrate import Migrate
 from flask_login import current_user
 from sqlalchemy import func
-#import matplotlib.pyplot as plt
 import io
 import base64
+import secrets
 from datetime import datetime
 from PIL import Image
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, SelectField, FileField
 from wtforms.validators import DataRequired, Email, Length
 
@@ -46,6 +47,11 @@ class User(UserMixin, db.Model):
     gender = db.Column(db.String(10), nullable=True)
     date_joined = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     unique_name = db.Column(db.String(20), unique=True, nullable=True)
+    pronouns = db.Column(db.String(30))
+    display_name = db.Column(db.String(50))
+    location = db.Column(db.String(100))
+    website = db.Column(db.String(200))
+    interests = db.Column(db.String(200))
     posts = db.relationship('Post', backref='author', lazy=True)
     goals = db.relationship('Goal', backref='user', lazy=True)
     likes = db.relationship('Like', backref='user', lazy=True)
@@ -125,7 +131,7 @@ class EditProfileForm(FlaskForm):
     gender = SelectField('Gender', choices=[('male', 'Male'), ('female', 'Female'), ('non-binary', 'Non-binary'), ('other', 'Other'), ('prefer_not_to_say', 'Prefer not to say')])
     pronouns = StringField('Preferred Pronouns')
     display_name = StringField('Display Name', validators=[Length(max=50)])
-    profile_picture = FileField('Profile Picture')
+    profile_picture = FileField('Update Profile Picture', validators=[FileAllowed(['jpg', 'png'])])
     location = StringField('Location', validators=[Length(max=100)])
     website = StringField('Website', validators=[Length(max=200)])
     interests = StringField('Interests (comma-separated)', validators=[Length(max=200)])
@@ -191,7 +197,7 @@ def profile(username):
     form = EditProfileForm(obj=user)
     return render_template('profile.html', user=user, posts=posts, goals=goals, form=form)
 
-@app.route('/edit_profile', methods=['POST'])
+@app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
     form = EditProfileForm()
@@ -210,7 +216,18 @@ def edit_profile():
         current_user.interests = form.interests.data
         db.session.commit()
         flash('Your profile has been updated!', 'success')
-    return redirect(url_for('profile', username=current_user.username))
+        return redirect(url_for('profile', username=current_user.username))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+        form.bio.data = current_user.bio
+        form.gender.data = current_user.gender
+        form.pronouns.data = current_user.pronouns
+        form.display_name.data = current_user.display_name
+        form.location.data = current_user.location
+        form.website.data = current_user.website
+        form.interests.data = current_user.interests
+    return render_template('edit_profile.html', title='Edit Profile', form=form)
 
 @app.route('/search')
 def search():
@@ -327,8 +344,8 @@ def post():
         file = request.files['image']
         
         if not moderate_content(title) or not moderate_content(content):
-            flash('Your post contains inappropriate content and cannot be submitted', 'error')
-            return redirect(url_for('post'))
+            flash('Your post may violate community guidelines. Please review and revise your content.', 'error')
+            return render_template('post.html', title=title, content=content, hashtags=hashtags)
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
