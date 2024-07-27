@@ -82,6 +82,18 @@ class User(UserMixin, db.Model):
 
 
 
+class CommentReply(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+
+class CommentLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
@@ -157,6 +169,12 @@ def notify_user(user, message):
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+def suggest_hashtags(content):
+    words = content.lower().split()
+    common_hashtags = ['#tech', '#love', '#nature', '#food', '#travel']
+    suggested = [tag for tag in common_hashtags if any(word in tag for word in words)]
+    return suggested[:3]
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -187,7 +205,9 @@ def home():
         followed_users = [user.id for user in current_user.following]
         followed_users.append(current_user.id)
         posts = Post.query.filter(Post.user_id.in_(followed_users)).filter_by(approved=True).order_by(Post.date_posted.desc()).all()
-        return render_template('home.html', posts=posts)
+        suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users)).filter_by(approved=True).order_by(func.random()).limit(5).all()
+        
+        return render_template('home.html', followed_posts=posts, suggested_posts=suggested_posts)
     else:
         return redirect(url_for('login'))
 
@@ -235,8 +255,12 @@ def edit_profile():
 @app.route('/search')
 def search():
     query = request.args.get('q')
-    users = User.query.filter(User.unique_name.like(f'%{query}%')).all()
-    return render_template('search_results.html', users=users)
+    users = User.query.filter(
+        (User.username.ilike(f'%{query}%')) |
+        (User.display_name.ilike(f'%{query}%'))
+    ).all()
+    posts = Post.query.filter(Post.hashtags.ilike(f'%{query}%')).all()
+    return render_template('search_results.html', users=users, posts=posts, query=query)
 
 @app.route('/follow/<username>')
 @login_required
@@ -268,6 +292,27 @@ def unfollow(username):
     db.session.commit()
     flash(f'You have unfollowed {username}.', 'success')
     return redirect(url_for('profile', username=username))
+
+def get_trending_hashtags():
+    recent_posts = Post.query.order_by(Post.date_posted.desc()).limit(100).all()
+    hashtags = {}
+    for post in recent_posts:
+        for tag in post.hashtags.split():
+            hashtags[tag] = hashtags.get(tag, 0) + 1
+    return sorted(hashtags.items(), key=lambda x: x[1], reverse=True)[:5]
+
+@app.context_processor
+def inject_trending_hashtags():
+    return dict(trending_hashtags=get_trending_hashtags())
+
+@app.route('/recommended_users')
+@login_required
+def recommended_users():
+    followed_users = [user.id for user in current_user.following]
+    recommended = User.query.filter(
+        ~User.id.in_(followed_users + [current_user.id])
+    ).order_by(func.random()).limit(5).all()
+    return render_template('recommended_users.html', recommended_users=recommended)
 
 @app.route('/delete_post/<int:post_id>', methods=['POST'])
 @login_required
@@ -337,6 +382,11 @@ def dashboard():
     goals = Goal.query.filter_by(user_id=current_user.id).order_by(Goal.deadline).all()
     return render_template('profile.html', posts=posts, goals=goals)
 
+@app.route('/hashtag/<hashtag>')
+def hashtag(hashtag):
+    posts = Post.query.filter(Post.hashtags.ilike(f'%{hashtag}%')).order_by(Post.date_posted.desc()).all()
+    return render_template('hashtag.html', posts=posts, hashtag=hashtag)
+
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post():
@@ -366,6 +416,9 @@ def post():
         db.session.commit()
         flash('Your post has been submitted', 'success')
         return redirect(url_for('home'))
+        suggested_hashtags = suggest_hashtags(content)
+        
+        return render_template('post.html', suggested_hashtags=suggested_hashtags)
     return render_template('post.html')
 
 @app.route('/like/<int:post_id>', methods=['POST'])
@@ -396,6 +449,31 @@ def comment(post_id):
         flash('Your comment has been added', 'success')
     else:
         flash('Your comment contains inappropriate content and cannot be submitted', 'error')
+    return redirect(url_for('home'))
+
+@app.route('/reply_comment/<int:comment_id>', methods=['POST'])
+@login_required
+def reply_comment(comment_id):
+    content = request.form['content']
+    if moderate_content(content):
+        new_reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
+        db.session.add(new_reply)
+        db.session.commit()
+        flash('Your reply has been added', 'success')
+    else:
+        flash('Your reply contains inappropriate content and cannot be submitted', 'error')
+    return redirect(url_for('home'))
+
+@app.route('/like_comment/<int:comment_id>', methods=['POST'])
+@login_required
+def like_comment(comment_id):
+    like = CommentLike.query.filter_by(user_id=current_user.id, comment_id=comment_id).first()
+    if like:
+        db.session.delete(like)
+    else:
+        new_like = CommentLike(user_id=current_user.id, comment_id=comment_id)
+        db.session.add(new_like)
+    db.session.commit()
     return redirect(url_for('home'))
 
 @app.route('/goal', methods=['GET', 'POST'])
