@@ -205,10 +205,17 @@ def home():
     if current_user.is_authenticated:
         followed_users = [user.id for user in current_user.following]
         followed_users.append(current_user.id)
-        posts = Post.query.filter(Post.user_id.in_(followed_users)).filter_by(approved=True).order_by(Post.date_posted.desc()).all()
-        suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users)).filter_by(approved=True).order_by(func.random()).limit(5).all()
+        posts = Post.query.filter(Post.user_id.in_(followed_users))\
+                          .filter_by(approved=True)\
+                          .order_by(Post.date_posted.desc())\
+                          .all()
+        suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users))\
+                                    .filter_by(approved=True)\
+                                    .order_by(func.random())\
+                                    .limit(5)\
+                                    .all()
         
-        return render_template('home.html', followed_posts=posts, suggested_posts=suggested_posts)
+        return render_template('home.html', posts=posts, suggested_posts=suggested_posts)
     else:
         return redirect(url_for('login'))
 
