@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>{{ user.username }}'s Followers</h1>
+    
+    <div class="follower-list">
+        {% if followers %}
+            {% for follower in followers %}
+                <div class="follower-item">
+                    <img src="{{ url_for('static', filename='profile_pics/' + follower.follower.profile_picture) }}" alt="{{ follower.follower.username }}'s profile picture" class="profile-pic-small">
+                    <a href="{{ url_for('profile', username=follower.follower.username) }}">{{ follower.follower.username }}</a>
+                    {% if follower.follower != current_user %}
+                        {% if current_user.is_following(follower.follower) %}
+                            <a href="{{ url_for('unfollow', username=follower.follower.username) }}" class="btn btn-sm">Unfollow</a>
+                        {% else %}
+                            <a href="{{ url_for('follow', username=follower.follower.username) }}" class="btn btn-sm">Follow</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>{{ user.username }} doesn't have any followers yet.</p>
+        {% endif %}
+    </div>
+    
+    <a href="{{ url_for('profile', username=user.username) }}" class="btn">Back to Profile</a>
+{% endblock %}

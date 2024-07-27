@@ -217,40 +217,43 @@ def profile(username):
     user = User.query.filter_by(username=username).first_or_404()
     posts = Post.query.filter_by(user_id=user.id).order_by(Post.date_posted.desc()).all()
     goals = Goal.query.filter_by(user_id=user.id).order_by(Goal.deadline).all()
+    is_owner = user == current_user
     form = EditProfileForm(obj=user)
-    return render_template('profile.html', user=user, posts=posts, goals=goals, form=form)
+    return render_template('profile.html', user=user, posts=posts, goals=goals, form=form, is_owner=is_owner)
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    form = EditProfileForm()
-    if form.validate_on_submit():
-        if form.profile_picture.data:
-            picture_file = save_picture(form.profile_picture.data)
-            current_user.profile_picture = picture_file
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.bio = form.bio.data
-        current_user.gender = form.gender.data
-        current_user.pronouns = form.pronouns.data
-        current_user.display_name = form.display_name.data
-        current_user.location = form.location.data
-        current_user.website = form.website.data
-        current_user.interests = form.interests.data
-        db.session.commit()
-        flash('Your profile has been updated!', 'success')
-        return redirect(url_for('profile', username=current_user.username))
-    elif request.method == 'GET':
-        form.username.data = current_user.username
-        form.email.data = current_user.email
-        form.bio.data = current_user.bio
-        form.gender.data = current_user.gender
-        form.pronouns.data = current_user.pronouns
-        form.display_name.data = current_user.display_name
-        form.location.data = current_user.location
-        form.website.data = current_user.website
-        form.interests.data = current_user.interests
-    return render_template('edit_profile.html', title='Edit Profile', form=form)
+    #if request.args.get('username') != current_user.username:
+     #   abort(403)
+        form = EditProfileForm()
+        if form.validate_on_submit():
+            if form.profile_picture.data:
+                picture_file = save_picture(form.profile_picture.data)
+                current_user.profile_picture = picture_file
+            current_user.username = form.username.data
+            current_user.email = form.email.data
+            current_user.bio = form.bio.data
+            current_user.gender = form.gender.data
+            current_user.pronouns = form.pronouns.data
+            current_user.display_name = form.display_name.data
+            current_user.location = form.location.data
+            current_user.website = form.website.data
+            current_user.interests = form.interests.data
+            db.session.commit()
+            flash('Your profile has been updated!', 'success')
+            return redirect(url_for('profile', username=current_user.username))
+        elif request.method == 'GET':
+            form.username.data = current_user.username
+            form.email.data = current_user.email
+            form.bio.data = current_user.bio
+            form.gender.data = current_user.gender
+            form.pronouns.data = current_user.pronouns
+            form.display_name.data = current_user.display_name
+            form.location.data = current_user.location
+            form.website.data = current_user.website
+            form.interests.data = current_user.interests
+        return render_template('edit_profile.html', title='Edit Profile', form=form)
 
 @app.route('/search')
 def search():
@@ -292,6 +295,20 @@ def unfollow(username):
     db.session.commit()
     flash(f'You have unfollowed {username}.', 'success')
     return redirect(url_for('profile', username=username))
+
+@app.route('/followers/<username>')
+@login_required
+def followers(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    followers = user.followers.all()
+    return render_template('followers.html', user=user, followers=followers)
+
+@app.route('/following/<username>')
+@login_required
+def following(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    following = user.following.all()
+    return render_template('following.html', user=user, following=following)
 
 def get_trending_hashtags():
     recent_posts = Post.query.order_by(Post.date_posted.desc()).limit(100).all()
@@ -381,6 +398,7 @@ def dashboard():
     posts = Post.query.filter_by(user_id=current_user.id).order_by(Post.date_posted.desc()).all()
     goals = Goal.query.filter_by(user_id=current_user.id).order_by(Goal.deadline).all()
     return render_template('profile.html', posts=posts, goals=goals)
+
 
 @app.route('/hashtag/<hashtag>')
 def hashtag(hashtag):
@@ -519,6 +537,8 @@ def user_activity():
         'comments': len(comments),
         'likes': len(likes)
     }
+
+    return render_template('user_activity.html', activity_data=activity_data)
 
 
 if __name__ == '__main__':
