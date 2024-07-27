@@ -18,6 +18,7 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, SelectField, FileField
 from wtforms.validators import DataRequired, Email, Length
 from dotenv import load_dotenv
+from sqlalchemy.exc import IntegrityError
 
 load_dotenv()
 
@@ -365,14 +366,25 @@ def signup():
             flash('Passwords do not match', 'error')
             return redirect(url_for('signup'))
 
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email address already exists. Please use a different email.', 'error')
+            return redirect(url_for('signup'))
+
         hashed_password = generate_password_hash(password)
         new_user = User(username=username, email=email, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Account created successfully', 'success')
-        return redirect(url_for('login'))
-    return render_template('signup.html')
+        
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Account created successfully', 'success')
+            return redirect(url_for('login'))
+        except IntegrityError:
+            db.session.rollback()
+            flash('An error occurred. Please try again.', 'error')
+            return redirect(url_for('signup'))
 
+    return render_template('signup.html')
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
