@@ -19,6 +19,7 @@ from wtforms import StringField, TextAreaField, SelectField, FileField
 from wtforms.validators import DataRequired, Email, Length
 from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
+import pytz
 
 load_dotenv()
 
@@ -39,11 +40,12 @@ login_manager.needs_refresh_message_category = 'info'
 
 migrate = Migrate(app, db)
 
+eat_tz = pytz.timezone('Africa/Nairobi')
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(eat_tz))
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -98,7 +100,7 @@ class User(UserMixin, db.Model):
 class CommentReply(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
 
@@ -111,7 +113,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=True)
     image = db.Column(db.String(100), nullable=True)
-    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     approved = db.Column(db.Boolean, default=False, nullable=False)
     likes = db.relationship('Like', backref='post', lazy=True)
@@ -135,7 +137,7 @@ class Like(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     
