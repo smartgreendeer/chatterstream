@@ -14,7 +14,7 @@
         <p>{{ post.content }}</p>
         <div class="post-meta">
             Posted by: <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a>
-            on {{ post.date_posted.strftime('%Y-%m-%d %H:%M') }}
+            on {{ post.date_posted.strftime('%Y-%m-%d %H:%M %Z') }}
         </div>
         <div class="post-actions">
             <button class="like-button" data-post-id="{{ post.id }}">
@@ -30,10 +30,31 @@
             {% for comment in post.comments %}
                 <div class="comment" id="comment-{{ comment.id }}">
                     <p>{{ comment.content }}</p>
-                    <small>{{ comment.author.username }} - {{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+                    <small>{{ comment.author.username }} - {{ comment.date_posted.strftime('%Y-%m-%d %H:%M %Z') }}</small>
                     {% if comment.author == current_user %}
                         <button class="delete-comment" data-comment-id="{{ comment.id }}">Delete</button>
                     {% endif %}
+                    <div class="comment-actions">
+                        <button class="reply-button" data-comment-id="{{ comment.id }}">Reply</button>
+                        <button class="react-button" data-comment-id="{{ comment.id }}">React</button>
+                    </div>
+                    <div class="comment-replies">
+                        {% for reply in comment.replies %}
+                            <div class="reply">
+                                <p>{{ reply.content }}</p>
+                                <small>{{ reply.author.username }} - {{ reply.date_posted.strftime('%Y-%m-%d %H:%M %Z') }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <form class="reply-form" style="display: none;" action="{{ url_for('comment_reply', comment_id=comment.id) }}" method="post">
+                        <input type="text" name="content" placeholder="Reply to this comment">
+                        <button type="submit">Submit Reply</button>
+                    </form>
+                    <div class="reaction-buttons" style="display: none;">
+                        <button class="reaction" data-reaction="like">👍</button>
+                        <button class="reaction" data-reaction="love">❤️</button>
+                        <button class="reaction" data-reaction="laugh">😂</button>
+                    </div>
                 </div>
             {% endfor %}
         </div>
@@ -46,7 +67,7 @@
     <p>No posts from followed users yet.</p>
 {% endfor %}
 
-
+<!-- Pagination -->
 {% if page.has_prev %}
     <a href="{{ url_for('home', page=page.prev_num) }}">Previous</a>
 {% endif %}
@@ -65,7 +86,7 @@
         <p>{{ post.content }}</p>
         <div class="post-meta">
             Posted by: <a href="{{ url_for('profile', username=post.author.username) }}">{{ post.author.username }}</a>
-            on {{ post.date_posted.strftime('%Y-%m-%d %H:%M') }}
+            on {{ post.date_posted.strftime('%Y-%m-%d %H:%M %Z') }}
         </div>
         <div class="post-actions">
             <button class="like-button" data-post-id="{{ post.id }}">
@@ -89,7 +110,7 @@ document.querySelectorAll('.like-button').forEach(button => {
         fetch(`/like/${postId}`, {method: 'POST'})
             .then(response => response.json())
             .then(data => {
-                this.textContent = data.status === 'liked' ? 'Unlike' : 'Like';
+                this.textContent = data.status === 'liked' ? '💔' : '❤️';
                 this.nextElementSibling.textContent = `${data.likes_count} likes`;
             });
     });
@@ -107,6 +128,41 @@ document.querySelectorAll('.delete-comment').forEach(button => {
                     }
                 });
         }
+    });
+});
+
+document.querySelectorAll('.reply-button').forEach(button => {
+    button.addEventListener('click', function() {
+        const commentId = this.dataset.commentId;
+        const replyForm = this.closest('.comment').querySelector('.reply-form');
+        replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+    });
+});
+
+document.querySelectorAll('.react-button').forEach(button => {
+    button.addEventListener('click', function() {
+        const commentId = this.dataset.commentId;
+        const reactionButtons = this.closest('.comment').querySelector('.reaction-buttons');
+        reactionButtons.style.display = reactionButtons.style.display === 'none' ? 'block' : 'none';
+    });
+});
+
+document.querySelectorAll('.reaction').forEach(button => {
+    button.addEventListener('click', function() {
+        const commentId = this.closest('.comment').dataset.commentId;
+        const reactionType = this.dataset.reaction;
+        fetch(`/comment_reaction/${commentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({reaction_type: reactionType}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update UI to reflect the new reaction
+            console.log(data);
+        });
     });
 });
 </script>

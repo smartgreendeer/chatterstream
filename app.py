@@ -160,6 +160,12 @@ class EditProfileForm(FlaskForm):
     website = StringField('Website', validators=[Length(max=200)])
     interests = StringField('Interests (comma-separated)', validators=[Length(max=200)])
 
+class CommentReaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+    reaction_type = db.Column(db.String(20), nullable=False)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -240,7 +246,6 @@ def suggested_posts():
                                 .limit(20)\
                                 .all()
     
-    # Filter posts based on shared interests
     filtered_posts = [post for post in suggested_posts if set(post.hashtags.split()).intersection(user_interests)]
     
     return render_template('suggested_posts.html', suggested_posts=filtered_posts[:10])
@@ -514,9 +519,9 @@ def comment(post_id):
         flash('Your comment contains inappropriate content and cannot be submitted', 'error')
     return redirect(url_for('home'))
 
-@app.route('/reply_comment/<int:comment_id>', methods=['POST'])
+@app.route('/comment_reply/<int:comment_id>', methods=['POST'])
 @login_required
-def reply_comment(comment_id):
+def comment_reply(comment_id):
     content = request.form['content']
     if moderate_content(content):
         new_reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
@@ -525,6 +530,19 @@ def reply_comment(comment_id):
         flash('Your reply has been added', 'success')
     else:
         flash('Your reply contains inappropriate content and cannot be submitted', 'error')
+    return redirect(url_for('home'))
+
+@app.route('/comment_reaction/<int:comment_id>', methods=['POST'])
+@login_required
+def comment_reaction(comment_id):
+    reaction_type = request.form['reaction_type']
+    existing_reaction = CommentReaction.query.filter_by(user_id=current_user.id, comment_id=comment_id).first()
+    if existing_reaction:
+        existing_reaction.reaction_type = reaction_type
+    else:
+        new_reaction = CommentReaction(user_id=current_user.id, comment_id=comment_id, reaction_type=reaction_type)
+        db.session.add(new_reaction)
+    db.session.commit()
     return redirect(url_for('home'))
 
 @app.route('/like_comment/<int:comment_id>', methods=['POST'])
