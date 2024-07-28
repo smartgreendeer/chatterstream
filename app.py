@@ -413,6 +413,7 @@ def signup():
             return redirect(url_for('signup'))
 
     return render_template('signup.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -587,7 +588,6 @@ if __name__ == '__main__':
     with app.app_context():
         db_url = app.config['SQLALCHEMY_DATABASE_URI']
         if db_url:
-            db.drop_all()
             db.create_all()
         else:
             print("WARNING: Database URL is not set. Skipping db operations.")
