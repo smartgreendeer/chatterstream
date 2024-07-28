@@ -19,9 +19,9 @@
         <div class="post-actions">
             <button class="like-button" data-post-id="{{ post.id }}">
                 {% if current_user.id in post.likes|map(attribute='user_id')|list %}
-                    &brokenheart;
+                    💔
                 {% else %}
-                    &hearts;
+                    ❤️
                 {% endif %}
             </button>
             <span class="likes-count">{{ post.likes|length }} likes</span>
