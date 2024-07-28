@@ -605,10 +605,4 @@ def user_activity():
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        db_url = app.config['SQLALCHEMY_DATABASE_URI']
-        if db_url:
-            db.create_all()
-        else:
-            print("WARNING: Database URL is not set. Skipping db operations.")
     app.run(debug=True)

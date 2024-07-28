@@ -34,35 +34,29 @@
                     {% if comment.author == current_user %}
                         <button class="delete-comment" data-comment-id="{{ comment.id }}">Delete</button>
                     {% endif %}
-                    <<div class="comments">
-                        {% for comment in post.comments %}
-                            <div class="comment" id="comment-{{ comment.id }}">
-                                <p>{{ comment.content }}</p>
-                                <small>{{ comment.author.username }} - {{ comment.date_posted.strftime('%Y-%m-%d %H:%M %Z') }}</small>
-                                <div class="comment-actions">
-                                    <button class="reply-button" data-comment-id="{{ comment.id }}">Reply</button>
-                                    <button class="react-button" data-comment-id="{{ comment.id }}">React</button>
-                                </div>
-                                <div class="comment-replies">
-                                    {% for reply in comment.replies %}
-                                        {% include '_reply.html' %}
-                                    {% endfor %}
-                                </div>
-                                <form class="reply-form" style="display: none;" data-comment-id="{{ comment.id }}">
-                                    <input type="text" name="content" placeholder="Reply to this comment">
-                                    <button type="submit">Submit Reply</button>
-                                </form>
-                                <div class="reaction-buttons" style="display: none;">
-                                    <button class="reaction" data-reaction="like">👍</button>
-                                    <button class="reaction" data-reaction="love">❤️</button>
-                                    <button class="reaction" data-reaction="laugh">😂</button>
-                                </div>
-                                <div class="comment-reactions">
-                                </div>
-                            </div>
+                    <div class="comment-actions">
+                        <button class="reply-button" data-comment-id="{{ comment.id }}">Reply</button>
+                        <button class="react-button" data-comment-id="{{ comment.id }}">React</button>
+                    </div>
+                    <div class="comment-replies">
+                        {% for reply in comment.replies %}
+                            {% include '_reply.html' %}
                         {% endfor %}
                     </div>
+                    <form class="reply-form" style="display: none;" data-comment-id="{{ comment.id }}">
+                        <input type="text" name="content" placeholder="Reply to this comment">
+                        <button type="submit">Submit Reply</button>
+                    </form>
+                    <div class="reaction-buttons" style="display: none;">
+                        <button class="reaction" data-reaction="like">👍</button>
+                        <button class="reaction" data-reaction="love">❤️</button>
+                        <button class="reaction" data-reaction="laugh">😂</button>
+                    </div>
+                    <div class="comment-reactions">
+                    </div>
                 </div>
+            {% endfor %}
+        </div>
         <form action="{{ url_for('comment', post_id=post.id) }}" method="post">
             <input type="text" name="content" placeholder="Add a comment">
             <button type="submit">Comment</button>
@@ -227,6 +221,8 @@ function followUser(userId) {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
+                // Handle successful follow
+            }
         });
 }
 </script>
