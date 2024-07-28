@@ -19,9 +19,9 @@
         <div class="post-actions">
             <button class="like-button" data-post-id="{{ post.id }}">
                 {% if current_user.id in post.likes|map(attribute='user_id')|list %}
-                    Unlike
+                    &brokenheart;
                 {% else %}
-                    Like
+                    &hearts;
                 {% endif %}
             </button>
             <span class="likes-count">{{ post.likes|length }} likes</span>
@@ -46,7 +46,7 @@
     <p>No posts from followed users yet.</p>
 {% endfor %}
 
-<!-- Pagination -->
+
 {% if page.has_prev %}
     <a href="{{ url_for('home', page=page.prev_num) }}">Previous</a>
 {% endif %}
