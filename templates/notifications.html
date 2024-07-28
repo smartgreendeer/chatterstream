@@ -10,20 +10,23 @@
         </select>
     </div>
     {% if notifications %}
-        {% for notification in notifications %}
-            <div class="notification {% if not notification.read %}unread{% endif %} {{ notification.type }}">
-                <div class="notification-content">
-                    {{ notification.message }}
-                </div>
-                <small>{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
-                {% if not notification.read %}
-                    <a href="{{ url_for('mark_notification_read', notification_id=notification.id) }}">Mark as read</a>
-                {% endif %}
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>No notifications yet.</p>
-    {% endif %}
+    <ul>
+    {% for notification in notifications %}
+        <li>
+            {{ notification.message }}
+            <small>{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            {% if not notification.read %}
+                <form action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" method="POST" style="display: inline;">
+                    <button type="submit">Mark as read</button>
+                </form>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No notifications.</p>
+{% endif %}
+{% endblock %}
 
     <script>
     // Notification filter functionality

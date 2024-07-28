@@ -582,11 +582,23 @@ def complete_goal(goal_id):
     flash('Goal marked as completed', 'success')
     return redirect(url_for('home'))
 
+
 @app.route('/notifications')
 @login_required
 def notifications():
     notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).all()
     return render_template('notifications.html', notifications=notifications)
+
+@app.route('/mark_notification_read/<int:notification_id>', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    notification = Notification.query.get_or_404(notification_id)
+    if notification.user_id != current_user.id:
+        abort(403)
+    notification.read = True
+    db.session.commit()
+    flash('Notification marked as read', 'success')
+    return redirect(url_for('notifications'))
 
 @app.route('/user_activity')
 @login_required
