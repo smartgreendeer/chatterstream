@@ -564,7 +564,7 @@ def post():
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['uploads'], filename))
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
         else:
             new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id, approved=True)
