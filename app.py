@@ -6,7 +6,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
 from flask_migrate import Migrate
-from flask_login import current_user
+from flask_login import current_user, login_required
 from sqlalchemy import func
 import io
 import base64
@@ -419,7 +419,10 @@ def inject_trending_hashtags():
 @app.route('/recommended_users')
 @login_required
 def recommended_users():
-    followed_users = [user.id for user in current_user.following]
+    if current_user.is_authenticated:
+        followed_users = [follow.followed.id for follow in current_user.following]
+    else:
+        followed_users = []
     recommended = User.query.filter(
         ~User.id.in_(followed_users + [current_user.id])
     ).order_by(func.random()).limit(5).all()
