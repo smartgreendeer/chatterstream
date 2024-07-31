@@ -286,12 +286,13 @@ def home():
         followed_users = [follow.followed_id for follow in current_user.following]
         followed_users.append(current_user.id)
         posts = Post.query.filter(Post.user_id.in_(followed_users))\
-                          .filter_by(approved=True)\
-                          .order_by(Post.date_posted.desc())\
-                          .paginate(page=page, per_page=posts_per_page)
-        
-        for post in posts.items:
-            post.comments = Comment.query.filter_by(post_id=post.id).all()
+                      .filter_by(approved=True)\
+                      .order_by(Post.date_posted.desc())\
+                      .paginate(page=page, per_page=posts_per_page)
+    
+    for post in posts.items:
+        post.comments = Comment.query.filter_by(post_id=post.id).all()
+        print(f"Post {post.id} has {len(post.comments)} comments")
         
         suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users))\
                                     .filter_by(approved=True)\
@@ -627,7 +628,8 @@ def comment(post_id):
             'comment': {
                 'id': new_comment.id, 
                 'content': new_comment.content, 
-                'author': current_user.username
+                'author': current_user.username,
+                'date_posted': new_comment.date_posted.strftime('%Y-%m-%d %H:%M %Z')
             }
         })
     else:
@@ -758,5 +760,4 @@ def user_activity():
 
 
 if __name__ == '__main__':
-    db.create_all()
     app.run(debug=True)
