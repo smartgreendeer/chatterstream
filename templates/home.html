@@ -117,7 +117,6 @@
 
 <h2>Suggested Users to Follow</h2>
 <div id="suggestedUsers">
-    <!-- Suggested users will be dynamically loaded here -->
 </div>
 
 <script>
@@ -239,22 +238,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Toggle comments visibility
-document.querySelectorAll('.comments-button').forEach(button => {
-    button.addEventListener('click', function() {
-        const postId = this.dataset.postId;
-        const commentsSection = document.getElementById(`comments-${postId}`);
-        const commentsText = this.querySelector('.comments-text');
-        
-        if (commentsSection.style.display === 'none') {
-            commentsSection.style.display = 'block';
-            commentsText.textContent = 'Hide Comments';
-        } else {
-            commentsSection.style.display = 'none';
-            commentsText.textContent = 'Show Comments';
-        }
+    document.querySelectorAll('.comments-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const commentsSection = document.getElementById(`comments-${postId}`);
+            const commentsText = this.querySelector('.comments-text');
+            
+            if (commentsSection.classList.contains('show')) {
+                commentsSection.classList.remove('show');
+                commentsText.textContent = 'Show Comments';
+            } else {
+                commentsSection.classList.add('show');
+                commentsText.textContent = 'Hide Comments';
+            }
+        });
     });
-});
-
     // Handle comment form submission
     document.querySelectorAll('.comment-form').forEach(form => {
         form.addEventListener('submit', function(e) {

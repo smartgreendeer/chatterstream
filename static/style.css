@@ -206,6 +206,17 @@ input[type="submit"]:hover, button[type="submit"]:hover {
   display: inline-block;
 }
 
+.comments-section {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.comments-section.show {
+  max-height: 1000px; /* Adjust this value based on your needs */
+  transition: max-height 0.5s ease-in;
+}
+
 /* Comment form submit button */
 .comment-form button[type="submit"], .reply-form button[type="submit"] {
   background-color: #00796b;
