@@ -102,7 +102,6 @@ class User(UserMixin, db.Model):
                                 lazy='dynamic',
                                 cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
-    followed_users = [follow.followed.id for follow in current_user.following]
     daily_usage = db.Column(db.Float, default=0)
 
     def __repr__(self):
