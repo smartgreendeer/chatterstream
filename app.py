@@ -237,7 +237,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def suggest_hashtags(content):
     words = content.lower().split()
-    common_hashtags = ['#tech', '#love', '#nature', '#food', '#travel']
+    common_hashtags = ['hashtags']
     suggested = [tag for tag in common_hashtags if any(word in tag for word in words)]
     return suggested[:3]
 
@@ -437,14 +437,12 @@ def delete_post(post_id):
     if post.author != current_user:
         abort(403)
     
-    # Delete associated comments first
     likes = Like.query.filter_by(post_id=post_id).all()
     Comment.query.filter_by(post_id=post_id).delete()
     for like in likes:
         db.session.delete(like)
     
     post = Post.query.get(post_id)  
-    # Now delete the post
     db.session.delete(post)
     
     try:
@@ -566,7 +564,7 @@ def post():
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file.save(os.path.join(app.config['uploads'], filename))
             new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
         else:
             new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id, approved=True)
