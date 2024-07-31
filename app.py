@@ -438,8 +438,12 @@ def delete_post(post_id):
         abort(403)
     
     # Delete associated comments first
+    likes = Like.query.filter_by(post_id=post_id).all()
     Comment.query.filter_by(post_id=post_id).delete()
+    for like in likes:
+        db.session.delete(like)
     
+    post = Post.query.get(post_id)  
     # Now delete the post
     db.session.delete(post)
     
