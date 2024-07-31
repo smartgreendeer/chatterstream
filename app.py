@@ -134,8 +134,9 @@ class CommentLike(db.Model):
     
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
     content = db.Column(db.Text, nullable=True)
-    image = db.Column(db.String(100), nullable=True)
+    image = db.Column(db.String(200), nullable=True)
     date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     approved = db.Column(db.Boolean, default=False, nullable=False)
@@ -576,7 +577,7 @@ def post():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
         else:
-            new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id, approved=True)
+            new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id,  approved=True)
         
         db.session.add(new_post)
         db.session.commit()
@@ -749,4 +750,5 @@ def user_activity():
 
 
 if __name__ == '__main__':
+    db.create_all()
     app.run(debug=True)

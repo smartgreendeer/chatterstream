@@ -200,6 +200,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    document.getElementById('newPostForm').addEventListener('submit', function(e) {
+        const fileInput = this.querySelector('input[type="file"]');
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const allowedExtensions = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+            if (!allowedExtensions.exec(file.name)) {
+                alert('Invalid file type. Only images are allowed.');
+                e.preventDefault();
+            }
+        }
+    });
+
     // Reaction button functionality
     document.querySelectorAll('.reaction').forEach(button => {
         button.addEventListener('click', function() {
