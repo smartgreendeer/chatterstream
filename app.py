@@ -550,6 +550,7 @@ def post():
         title = request.form.get('title', '')
         content = request.form.get('content', '')
         hashtags = request.form.get('hashtags', '')
+        image = request.files.get('image')
         
         if not title:
             flash('Title is required', 'error')
@@ -561,6 +562,14 @@ def post():
             return render_template('post.html', title=title, content=content, hashtags=hashtags)
         
         file = request.files.get('image')
+        
+        
+        if image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_url = url_for('static', filename='uploads/' + filename)
+        else:
+            image_url = None
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
