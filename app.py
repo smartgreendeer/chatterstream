@@ -260,6 +260,7 @@ def save_picture(form_picture):
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(app.root_path, 'static/uploads', picture_fn)
+    picture_path = os.path.join(app.root_path, 'static', 'profile_pics', picture_fn)
     
     # Resize image
     output_size = (800, 800)  # Max width and height
@@ -329,34 +330,39 @@ def profile(username):
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-        form = EditProfileForm()
-        if form.validate_on_submit():
-            if form.profile_picture.data:
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        if form.profile_picture.data:
+            try:
                 picture_file = save_picture(form.profile_picture.data)
                 current_user.profile_picture = picture_file
-            current_user.username = form.username.data
-            current_user.email = form.email.data
-            current_user.bio = form.bio.data
-            current_user.gender = form.gender.data
-            current_user.pronouns = form.pronouns.data
-            current_user.display_name = form.display_name.data
-            current_user.location = form.location.data
-            current_user.website = form.website.data
-            current_user.interests = form.interests.data
-            db.session.commit()
-            flash('Your profile has been updated!', 'success')
-            return redirect(url_for('profile', username=current_user.username))
-        elif request.method == 'GET':
-            form.username.data = current_user.username
-            form.email.data = current_user.email
-            form.bio.data = current_user.bio
-            form.gender.data = current_user.gender
-            form.pronouns.data = current_user.pronouns
-            form.display_name.data = current_user.display_name
-            form.location.data = current_user.location
-            form.website.data = current_user.website
-            form.interests.data = current_user.interests
-        return render_template('edit_profile.html', title='Edit Profile', form=form)
+            except Exception as e:
+                flash(f'Error saving profile picture: {str(e)}', 'error')
+        
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        current_user.bio = form.bio.data
+        current_user.gender = form.gender.data
+        current_user.pronouns = form.pronouns.data
+        current_user.display_name = form.display_name.data
+        current_user.location = form.location.data
+        current_user.website = form.website.data
+        current_user.interests = form.interests.data
+        
+        db.session.commit()
+        flash('Your profile has been updated!', 'success')
+        return redirect(url_for('profile', username=current_user.username))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+        form.bio.data = current_user.bio
+        form.gender.data = current_user.gender
+        form.pronouns.data = current_user.pronouns
+        form.display_name.data = current_user.display_name
+        form.location.data = current_user.location
+        form.website.data = current_user.website
+        form.interests.data = current_user.interests
+    return render_template('edit_profile.html', title='Edit Profile', form=form)
 
 @app.route('/search')
 def search():
