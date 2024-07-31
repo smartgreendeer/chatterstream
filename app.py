@@ -65,16 +65,14 @@ def moderate_content(content):
         return True
 class Follow(db.Model):
     __tablename__ = 'follows'
-    id = db.Column(db.Integer, primary_key=True)
-    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    follower = db.relationship('User', foreign_keys=[follower_id])
-    followed = db.relationship('User', foreign_keys=[followed_id])
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(eat_tz))
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
+    username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     bio = db.Column(db.Text, nullable=True)
@@ -245,6 +243,11 @@ def suggest_hashtags(content):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def follow_user(follower_id, followed_id):
+    new_follow = Follow(follower_id=follower_id, followed_id=followed_id)
+    db.session.add(new_follow)
+    db.session.commit()
 
 def save_picture(form_picture):
     random_hex = secrets.token_hex(8)
