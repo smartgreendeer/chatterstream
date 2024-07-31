@@ -285,24 +285,28 @@ def home():
         posts_per_page = 10
         followed_users = [follow.followed_id for follow in current_user.following]
         followed_users.append(current_user.id)
+
         posts = Post.query.filter(Post.user_id.in_(followed_users))\
-                      .filter_by(approved=True)\
-                      .order_by(Post.date_posted.desc())\
-                      .paginate(page=page, per_page=posts_per_page)
-    
-    for post in posts.items:
-        post.comments = Comment.query.filter_by(post_id=post.id).all()
-        print(f"Post {post.id} has {len(post.comments)} comments")
+                          .filter_by(approved=True)\
+                          .order_by(Post.date_posted.desc())\
+                          .paginate(page=page, per_page=posts_per_page)
+
+        for post in posts.items:
+            post.comments = Comment.query.filter_by(post_id=post.id).all()
+            print(f"Post {post.id} has {len(post.comments)} comments")
         
         suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users))\
                                     .filter_by(approved=True)\
                                     .order_by(func.random())\
                                     .limit(5)\
                                     .all()
-        
+
         return render_template('home.html', posts=posts.items, page=posts, suggested_posts=suggested_posts)
     else:
+        # Redirect to login page if the user is not authenticated
         return redirect(url_for('login'))
+
+
 
 @app.route('/suggested_posts')
 @login_required
