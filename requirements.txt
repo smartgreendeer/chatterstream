@@ -16,3 +16,4 @@ gunicorn
 python-dotenv
 waitress
 pytz
+google.generativeai==0.7.2

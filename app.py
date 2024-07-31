@@ -20,6 +20,7 @@ from wtforms.validators import DataRequired, Email, Length
 from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 import pytz
+import google.generativeai as genai
 
 load_dotenv()
 
@@ -41,6 +42,26 @@ login_manager.needs_refresh_message_category = 'info'
 migrate = Migrate(app, db)
 
 eat_tz = pytz.timezone('Africa/Nairobi')
+
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+model = genai.GenerativeModel('gemini-pro')
+
+def moderate_content(content):
+    try:
+        prompt = f"""
+        Please review the following content and determine if it violates Meta's Community Standards:
+        "{content}"
+        
+        Respond with either "ALLOWED" or "VIOLATES" followed by a brief explanation.
+        """
+
+        response = model.generate_content(prompt)
+        result = response.text.strip().upper()
+
+        return result.startswith("ALLOWED")
+    except Exception as e:
+        print(f"Error in content moderation: {str(e)}")
+        return True
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
@@ -103,7 +124,7 @@ class CommentReply(db.Model):
     date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
-
+    author = db.relationship('User', backref='replies', lazy=True)
 class CommentLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -117,7 +138,7 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     approved = db.Column(db.Boolean, default=False, nullable=False)
     likes = db.relationship('Like', backref='post', lazy=True)
-    comments = db.relationship('Comment', backref='post', lazy=True)
+    comments = db.relationship('Comment', backref='post', lazy=True, cascade="all, delete-orphan")
     title = db.Column(db.String(100), nullable=False)
     hashtags = db.Column(db.String(200))
     
@@ -137,9 +158,21 @@ class Like(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(eat_tz))
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    replies = db.relationship('CommentReply', backref='comment', lazy='dynamic')
+    reactions = db.relationship('CommentReaction', backref='comment', lazy='dynamic')
+
+    def get_reaction_counts(self):
+        reaction_counts = {}
+        for reaction in self.reactions:
+            reaction_counts[reaction.reaction] = reaction_counts.get(reaction.reaction, 0) + 1
+        return reaction_counts
+
+    def get_user_reaction(self, user_id):
+        user_reaction = CommentReaction.query.filter_by(comment_id=self.id, user_id=user_id).first()
+        return user_reaction.reaction if user_reaction else None
     
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -164,15 +197,31 @@ class CommentReaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
-    reaction_type = db.Column(db.String(20), nullable=False)
+    reaction = db.Column(db.String(20), nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 def moderate_content(content):
-    forbidden_words = ['hate', 'violence', 'abuse']
-    return not any(word in content.lower() for word in forbidden_words)
+    try:
+        guidelines_url = os.getenv('META_GUIDELINES_URL')
+        prompt = f"Analyze the following content and determine if it violates Meta's community guidelines (available at {guidelines_url}). Respond with 'APPROPRIATE' or 'INAPPROPRIATE' followed by a brief explanation. If inappropriate, specify if insults or vulgar words were used:\n\n{content}\n\nAnalysis:"
+        response = model.generate_content(prompt)
+        
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            result = response.candidates[0].content.parts[0].text.upper()
+            if "APPROPRIATE" in result:
+                return True, response.candidates[0].content.parts[0].text
+            else:
+                return False, response.candidates[0].content.parts[0].text
+        else:
+            # If no valid response, assume the content is inappropriate
+            return False, "Content moderation failed. Treating as inappropriate for safety."
+    except Exception as e:
+        print(f"Error in content moderation: {str(e)}")
+        # If an error occurs, err on the side of caution and treat as inappropriate
+        return False, "Content moderation error. Treating as inappropriate for safety."
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -225,6 +274,9 @@ def home():
                           .filter_by(approved=True)\
                           .order_by(Post.date_posted.desc())\
                           .paginate(page=page, per_page=posts_per_page)
+        
+        for post in posts.items:
+            post.comments = Comment.query.filter_by(post_id=post.id).all()
         
         suggested_posts = Post.query.filter(~Post.user_id.in_(followed_users))\
                                     .filter_by(approved=True)\
@@ -374,9 +426,21 @@ def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
     if post.author != current_user:
         abort(403)
+    
+    # Delete associated comments first
+    Comment.query.filter_by(post_id=post_id).delete()
+    
+    # Now delete the post
     db.session.delete(post)
-    db.session.commit()
-    flash('Your post has been deleted.', 'success')
+    
+    try:
+        db.session.commit()
+        flash('Your post has been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while deleting the post.', 'error')
+        print(f"Error deleting post: {str(e)}")
+    
     return redirect(url_for('profile', username=current_user.username))
 
 @app.route('/delete_comment/<int:comment_id>', methods=['POST'])
@@ -465,8 +529,9 @@ def post():
             flash('Title is required', 'error')
             return render_template('post.html')
 
-        if not moderate_content(title) or not moderate_content(content):
-            flash('Your post may violate community guidelines. Please review and revise your content.', 'error')
+        is_allowed, moderation_message = moderate_content(title + " " + content)
+        if not is_allowed:
+            flash(f'Your post may violate community guidelines: {moderation_message}. Please review and revise your content.', 'error')
             return render_template('post.html', title=title, content=content, hashtags=hashtags)
         
         file = request.files.get('image')
@@ -482,9 +547,7 @@ def post():
         db.session.commit()
         flash('Your post has been submitted', 'success')
         return redirect(url_for('home'))
-        suggested_hashtags = suggest_hashtags(content)
-        
-        return render_template('post.html', suggested_hashtags=suggested_hashtags)
+    
     return render_template('post.html')
 
 @app.route('/like/<int:post_id>', methods=['POST'])
@@ -509,42 +572,76 @@ def like(post_id):
 def comment(post_id):
     post = Post.query.get_or_404(post_id)
     content = request.form['content']
-    if moderate_content(content):
+    is_allowed, moderation_message = moderate_content(content)
+    if is_allowed:
         new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
         db.session.add(new_comment)
         db.session.commit()
         notify_user(post.author, f"{current_user.username} commented on your post.")
-        flash('Your comment has been added', 'success')
+        return jsonify({
+            'status': 'success', 
+            'comment': {
+                'id': new_comment.id, 
+                'content': new_comment.content, 
+                'author': current_user.username
+            }
+        })
     else:
-        flash('Your comment contains inappropriate content and cannot be submitted', 'error')
-    return redirect(url_for('home'))
+        return jsonify({
+            'status': 'error', 
+            'message': f'Your comment may violate community guidelines: {moderation_message}. Please review and revise your content.'
+        }), 400
 
-@app.route('/comment_reply/<int:comment_id>', methods=['POST'])
+@app.route('/reply_to_comment/<int:comment_id>', methods=['POST'])
 @login_required
-def comment_reply(comment_id):
-    content = request.form['content']
-    if moderate_content(content):
-        new_reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
-        db.session.add(new_reply)
+def reply_to_comment(comment_id):
+    content = request.form.get('content')
+    if not content:
+        return jsonify({'error': 'Reply content is required'}), 400
+    
+    is_allowed, moderation_message = moderate_content(content)
+    if is_allowed:
+        comment = Comment.query.get_or_404(comment_id)
+        reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
+        db.session.add(reply)
         db.session.commit()
-        flash('Your reply has been added', 'success')
+        
+        return jsonify({
+            'status': 'success',
+            'id': reply.id,
+            'content': reply.content,
+            'timestamp': reply.date_posted.strftime('%Y-%m-%d %H:%M:%S'),
+            'username': current_user.username
+        }), 201
     else:
-        flash('Your reply contains inappropriate content and cannot be submitted', 'error')
-    return redirect(url_for('home'))
+        return jsonify({'status': 'error', 'message': f'Your reply may violate community guidelines: {moderation_message}. Please review and revise your content.'})
 
-@app.route('/comment_reaction/<int:comment_id>', methods=['POST'])
+@app.route('/react_to_comment/<int:comment_id>', methods=['POST'])
 @login_required
-def comment_reaction(comment_id):
-    reaction_type = request.form['reaction_type']
+def react_to_comment(comment_id):
+    reaction = request.form.get('reaction')
+    if not reaction:
+        return jsonify({'error': 'Reaction is required'}), 400
+    
+    comment = Comment.query.get_or_404(comment_id)
     existing_reaction = CommentReaction.query.filter_by(user_id=current_user.id, comment_id=comment_id).first()
+    
     if existing_reaction:
-        existing_reaction.reaction_type = reaction_type
+        if existing_reaction.reaction == reaction:
+            db.session.delete(existing_reaction)
+        else:
+            existing_reaction.reaction = reaction
     else:
-        new_reaction = CommentReaction(user_id=current_user.id, comment_id=comment_id, reaction_type=reaction_type)
+        new_reaction = CommentReaction(user_id=current_user.id, comment_id=comment_id, reaction=reaction)
         db.session.add(new_reaction)
+    
     db.session.commit()
-    return redirect(url_for('home'))
-
+    
+    return jsonify({
+        'message': 'Reaction updated successfully',
+        'reactions': comment.get_reaction_counts()
+    }), 200
+    
 @app.route('/like_comment/<int:comment_id>', methods=['POST'])
 @login_required
 def like_comment(comment_id):
