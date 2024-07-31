@@ -25,7 +25,9 @@
                 {% endif %}
             </button>
             <span class="likes-count">{{ post.likes|length }} likes</span>
-            <button class="comments-button" data-post-id="{{ post.id }}">💬 Comments</button>
+            <button class="comments-button" data-post-id="{{ post.id }}">
+                💬 <span class="comments-text">Show Comments</span>
+            </button>
         </div>
         <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
             {% for comment in post.comments %}
@@ -237,13 +239,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Toggle comments visibility
-    document.querySelectorAll('.comments-button').forEach(button => {
-        button.addEventListener('click', function() {
-            const postId = this.dataset.postId;
-            const commentsSection = document.getElementById(`comments-${postId}`);
-            commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
-        });
+document.querySelectorAll('.comments-button').forEach(button => {
+    button.addEventListener('click', function() {
+        const postId = this.dataset.postId;
+        const commentsSection = document.getElementById(`comments-${postId}`);
+        const commentsText = this.querySelector('.comments-text');
+        
+        if (commentsSection.style.display === 'none') {
+            commentsSection.style.display = 'block';
+            commentsText.textContent = 'Hide Comments';
+        } else {
+            commentsSection.style.display = 'none';
+            commentsText.textContent = 'Show Comments';
+        }
     });
+});
 
     // Handle comment form submission
     document.querySelectorAll('.comment-form').forEach(form => {
