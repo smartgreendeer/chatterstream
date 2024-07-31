@@ -30,7 +30,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
+app.config['MAX_CONTENT_LENGTH'] = 256 * 1024 * 1024  
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 db = SQLAlchemy(app)
@@ -254,9 +254,10 @@ def save_picture(form_picture):
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
-    picture_path = os.path.join(app.root_path, 'static/profile_pics', picture_fn)
-    os.makedirs(os.path.dirname(picture_path), exist_ok=True)
-    output_size = (125, 125)
+    picture_path = os.path.join(app.root_path, 'static/uploads', picture_fn)
+    
+    # Resize image
+    output_size = (800, 800)  # Max width and height
     i = Image.open(form_picture)
     i.thumbnail(output_size)
     i.save(picture_path)
@@ -565,19 +566,23 @@ def post():
         file = request.files.get('image')
         
         
-        if image and allowed_file(image.filename):
-            filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_url = url_for('static', filename='uploads/' + filename)
-        else:
-            image_url = None
-        
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        if image:
+            if not allowed_file(image.filename):
+                flash('Invalid file type. Only images are allowed.', 'error')
+                return render_template('post.html', title=title, content=content, hashtags=hashtags)
+            
+            try:
+                filename = secure_filename(image.filename)
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image.save(image_path)
+            except Exception as e:
+                flash('Error uploading image. Please try again.', 'error')
+                print(f"Error saving image: {str(e)}")
+                return render_template('post.html', title=title, content=content, hashtags=hashtags)
+            
             new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
         else:
-            new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id,  approved=True)
+            new_post = Post(title=title, content=content, hashtags=hashtags, user_id=current_user.id, approved=True)
         
         db.session.add(new_post)
         db.session.commit()
