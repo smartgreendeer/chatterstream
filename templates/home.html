@@ -241,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.comments-button').forEach(button => {
             button.addEventListener('click', function() {
+                console.log('Comments button clicked');
                 const postId = this.dataset.postId;
                 const commentsSection = document.getElementById(`comments-${postId}`);
                 const commentsText = this.querySelector('.comments-text');
