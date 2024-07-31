@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 import pytz
 import google.generativeai as genai
+import requests
 
 load_dotenv()
 
@@ -476,6 +477,20 @@ def signup():
         try:
             db.session.add(new_user)
             db.session.commit()
+
+            # Send data to Zapier webhook
+            zapier_webhook_url = "https://hooks.zapier.com/hooks/catch/19639396/2uf0dpk/"
+            payload = {
+                "username": username,
+                "email": email
+            }
+            response = requests.post(zapier_webhook_url, json=payload)
+            
+            if response.status_code == 200:
+                print("Data sent to Zapier successfully")
+            else:
+                print(f"Failed to send data to Zapier. Status code: {response.status_code}")
+
             flash('Account created successfully', 'success')
             return redirect(url_for('login'))
         except IntegrityError:
