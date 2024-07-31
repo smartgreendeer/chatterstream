@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Recommended Users</h1>
+<ul>
+    {% for user in recommended_users %}
+        <li>{{ user.name }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

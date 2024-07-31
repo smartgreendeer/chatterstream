@@ -65,8 +65,11 @@ def moderate_content(content):
         return True
 class Follow(db.Model):
     __tablename__ = 'follows'
+    id = db.Column(db.Integer, primary_key=True)
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    follower = db.relationship('User', foreign_keys=[follower_id])
+    followed = db.relationship('User', foreign_keys=[followed_id])
     timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(eat_tz))
 
 class User(UserMixin, db.Model):
@@ -99,6 +102,7 @@ class User(UserMixin, db.Model):
                                 lazy='dynamic',
                                 cascade='all, delete-orphan')
     notifications = db.relationship('Notification', backref='user', lazy='dynamic')
+    followed_users = [follow.followed.id for follow in current_user.following]
     daily_usage = db.Column(db.Float, default=0)
 
     def __repr__(self):
@@ -248,7 +252,7 @@ def save_picture(form_picture):
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(app.root_path, 'static/profile_pics', picture_fn)
-    
+    os.makedirs(os.path.dirname(picture_path), exist_ok=True)
     output_size = (125, 125)
     i = Image.open(form_picture)
     i.thumbnail(output_size)
