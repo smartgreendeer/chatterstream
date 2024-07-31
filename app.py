@@ -29,7 +29,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 256 * 1024 * 1024  
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -46,6 +46,9 @@ eat_tz = pytz.timezone('Africa/Nairobi')
 
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 model = genai.GenerativeModel('gemini-pro')
+
+upload_dir = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(upload_dir, exist_ok=True)
 
 def moderate_content(content):
     try:
@@ -227,14 +230,16 @@ def moderate_content(content):
         return False, "Content moderation error. Treating as inappropriate for safety."
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+          
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+           
 def notify_user(user, message):
     notification = Notification(user_id=user.id, message=message)
     db.session.add(notification)
     db.session.commit()
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def suggest_hashtags(content):
     words = content.lower().split()
@@ -563,21 +568,13 @@ def post():
             flash(f'Your post may violate community guidelines: {moderation_message}. Please review and revise your content.', 'error')
             return render_template('post.html', title=title, content=content, hashtags=hashtags)
         
-        file = request.files.get('image')
-        
-        
-        if image:
-            if not allowed_file(image.filename):
-                flash('Invalid file type. Only images are allowed.', 'error')
-                return render_template('post.html', title=title, content=content, hashtags=hashtags)
-            
+        if image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            upload_path = os.path.join(app.root_path, 'static', 'uploads', filename)
             try:
-                filename = secure_filename(image.filename)
-                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                image.save(image_path)
+                image.save(upload_path)
             except Exception as e:
-                flash('Error uploading image. Please try again.', 'error')
-                print(f"Error saving image: {str(e)}")
+                flash(f'Error saving image: {str(e)}', 'error')
                 return render_template('post.html', title=title, content=content, hashtags=hashtags)
             
             new_post = Post(title=title, content=content, hashtags=hashtags, image=filename, user_id=current_user.id, approved=True)
