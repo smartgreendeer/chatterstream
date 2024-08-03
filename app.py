@@ -222,11 +222,9 @@ def moderate_content(content):
             else:
                 return False, response.candidates[0].content.parts[0].text
         else:
-            # If no valid response, assume the content is inappropriate
             return False, "Content moderation failed. Treating as inappropriate for safety."
     except Exception as e:
         print(f"Error in content moderation: {str(e)}")
-        # If an error occurs, err on the side of caution and treat as inappropriate
         return False, "Content moderation error. Treating as inappropriate for safety."
 
 def allowed_file(filename):
