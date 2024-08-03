@@ -206,6 +206,11 @@ input[type="submit"]:hover, button[type="submit"]:hover {
   display: inline-block;
 }
 
+.bio-text {
+  white-space: pre-wrap;
+}
+
+
 .comments-section {
   max-height: 0;
   overflow: hidden;

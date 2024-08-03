@@ -5,9 +5,13 @@
     <div class="profile-info">
         <h1>{{ user.username }}</h1>
         <img src="{{ url_for('static', filename='profile_pics/' + user.profile_picture) }}" alt="{{ user.username }}'s profile picture">
-        <p> {{ user.unique_name }}</p>
-        <p> {{ user.bio }}</p>
+        <p>{{ user.display_name }}</p>
+        <p class="bio-text"> <pre>{{ user.bio }}</pre></p>
         <p> {{ user.gender }}</p>
+        <p>{{ user.pronouns }}</p>
+        <p>{{ user.location }}</p>
+        <p> <a href="{{ user.website }}" target="_blank">{{ user.website }}</a></p>
+        <p>{{ user.interests }}</p>
         <p>Joined: {{ user.date_joined.strftime('%Y-%m-%d') }}</p>
         <a href="{{ url_for('followers', username=user.username) }}">Followers: {{ user.followers.count() }}</a>
         <a href="{{ url_for('following', username=user.username) }}">Following: {{ user.following.count() }}</a>
