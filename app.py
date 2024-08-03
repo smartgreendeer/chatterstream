@@ -27,7 +27,7 @@ from celery import Celery
 load_dotenv()
 
 app = Flask(__name__)
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(years=100)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365 * 1000)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
