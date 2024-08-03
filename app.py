@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,7 +11,7 @@ from sqlalchemy import func
 import io
 import base64
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from PIL import Image
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
@@ -22,16 +22,25 @@ from sqlalchemy.exc import IntegrityError
 import pytz
 import google.generativeai as genai
 import requests
+from celery import Celery
 
 load_dotenv()
 
 app = Flask(__name__)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(years=100)
+app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
+app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 app.config['MAX_CONTENT_LENGTH'] = 256 * 1024 * 1024  
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -130,10 +139,13 @@ class CommentReply(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
     author = db.relationship('User', backref='replies', lazy=True)
+    deleted = db.Column(db.Boolean, default=False)
+    
 class CommentLike(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+    deleted = db.Column(db.Boolean, default=False)
     
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -147,6 +159,7 @@ class Post(db.Model):
     comments = db.relationship('Comment', backref='post', lazy=True, cascade="all, delete-orphan")
     title = db.Column(db.String(100), nullable=False)
     hashtags = db.Column(db.String(200))
+    deleted = db.Column(db.Boolean, default=False)
     
 class Goal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -169,7 +182,8 @@ class Comment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     replies = db.relationship('CommentReply', backref='comment', lazy='dynamic')
     reactions = db.relationship('CommentReaction', backref='comment', lazy='dynamic')
-
+    deleted = db.Column(db.Boolean, default=False)
+    
     def get_reaction_counts(self):
         reaction_counts = {}
         for reaction in self.reactions:
@@ -462,6 +476,7 @@ def delete_post(post_id):
     db.session.delete(post)
     
     try:
+        post.deleted = True
         db.session.commit()
         flash('Your post has been deleted.', 'success')
     except Exception as e:
@@ -534,11 +549,13 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
-            login_user(user)
+            login_user(user, remember=True)
+            session.permanent = True
             return redirect(url_for('home'))
         else:
             flash('Invalid username or password', 'error')
     return render_template('login.html')
+
 
 @app.route('/logout')
 @login_required
@@ -762,4 +779,4 @@ def user_activity():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
