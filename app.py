@@ -637,8 +637,8 @@ def like(post_id):
 def comment(post_id):
     post = Post.query.get_or_404(post_id)
     content = request.form['content']
-    is_allowed, moderation_message = moderate_content(content)
-    if is_allowed:
+    #is_allowed, moderation_message = moderate_content(content)
+    #if is_allowed:
         new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
         db.session.add(new_comment)
         db.session.commit()
@@ -652,11 +652,11 @@ def comment(post_id):
                 'date_posted': new_comment.date_posted.strftime('%Y-%m-%d %H:%M %Z')
             }
         })
-    else:
-        return jsonify({
-            'status': 'error', 
-            'message': f'Your comment may violate community guidelines: {moderation_message}. Please review and revise your content.'
-        }), 400
+    #else:
+       # return jsonify({
+         #   'status': 'error', 
+           # 'message': f'Your comment may violate community guidelines: {moderation_message}. Please review and revise your content.'
+      #  }), 400
 
 @app.route('/reply_to_comment/<int:comment_id>', methods=['POST'])
 @login_required
@@ -665,8 +665,8 @@ def reply_to_comment(comment_id):
     if not content:
         return jsonify({'error': 'Reply content is required'}), 400
     
-    is_allowed, moderation_message = moderate_content(content)
-    if is_allowed:
+   # is_allowed, moderation_message = moderate_content(content)
+    #if is_allowed:
         comment = Comment.query.get_or_404(comment_id)
         reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
         db.session.add(reply)
@@ -679,8 +679,8 @@ def reply_to_comment(comment_id):
             'timestamp': reply.date_posted.strftime('%Y-%m-%d %H:%M:%S'),
             'username': current_user.username
         }), 201
-    else:
-        return jsonify({'status': 'error', 'message': f'Your reply may violate community guidelines: {moderation_message}. Please review and revise your content.'})
+    #else:
+    #    return jsonify({'status': 'error', 'message': f'Your reply may violate community guidelines: {moderation_message}. Please review and revise your content.'})
 
 @app.route('/react_to_comment/<int:comment_id>', methods=['POST'])
 @login_required
