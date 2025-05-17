@@ -58,25 +58,24 @@ model = genai.GenerativeModel('gemini-pro')
 
 upload_dir = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(upload_dir, exist_ok=True)
-"""
-def moderate_content(content):
-    try:
-    """
-        prompt = f"""
-        Please review the following content and determine if it violates Meta's Community Standards:
-        "{content}"
-        """
-        Respond with either "ALLOWED" or "VIOLATES" followed by a brief explanation.
-        """
-"""
-        response = model.generate_content(prompt)
-        result = response.text.strip().upper()
 
-        return result.startswith("ALLOWED")
-    except Exception as e:
-        print(f"Error in content moderation: {str(e)}")
-        return True
-"""
+#def moderate_content(content):
+   #try:
+    
+       #prompt = f"""
+        #Please review the following content and determine if it violates Meta's Community Standards:
+    #    "{content}"
+      #  """
+     #   Respond with either "ALLOWED" or "VIOLATES" followed by a brief explanation.
+     #   """
+
+      #  response = model.generate_content(prompt)
+       # result = response.text.strip().upper()
+
+        #return result.startswith("ALLOWED")
+    #except Exception as e:
+        #print(f"Error in content moderation: {str(e)}")
+        #return True
 class Follow(db.Model):
     __tablename__ = 'follows'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
