@@ -224,23 +224,23 @@ class CommentReaction(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def moderate_content(content):
-    try:
-        guidelines_url = os.getenv('META_GUIDELINES_URL')
-        prompt = f"Analyze the following content and determine if it violates Meta's community guidelines (available at {guidelines_url}). Respond with 'APPROPRIATE' or 'INAPPROPRIATE' followed by a brief explanation. If inappropriate, specify if insults or vulgar words were used:\n\n{content}\n\nAnalysis:"
-        response = model.generate_content(prompt)
+#def moderate_content(content):
+  #  try:
+   #     guidelines_url = os.getenv('META_GUIDELINES_URL')
+    #    prompt = f"Analyze the following content and determine if it violates Meta's community guidelines (available at {guidelines_url}). Respond with 'APPROPRIATE' or 'INAPPROPRIATE' followed by a brief explanation. If inappropriate, specify if insults or vulgar words were used:\n\n{content}\n\nAnalysis:"
+    #    response = model.generate_content(prompt)
         
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-            result = response.candidates[0].content.parts[0].text.upper()
-            if "APPROPRIATE" in result:
-                return True, response.candidates[0].content.parts[0].text
-            else:
-                return False, response.candidates[0].content.parts[0].text
-        else:
-            return False, "Content moderation failed. Treating as inappropriate for safety."
-    except Exception as e:
-        print(f"Error in content moderation: {str(e)}")
-        return False, "Content moderation error. Treating as inappropriate for safety."
+       # if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+           # result = response.candidates[0].content.parts[0].text.upper()
+          #  if "APPROPRIATE" in result:
+             #   return True, response.candidates[0].content.parts[0].text
+           # else:
+            #    return False, response.candidates[0].content.parts[0].text
+       # else:
+           # return False, "Content moderation failed. Treating as inappropriate for safety."
+   # except Exception as e:
+       # print(f"Error in content moderation: {str(e)}")
+       # return False, "Content moderation error. Treating as inappropriate for safety."
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -590,10 +590,10 @@ def post():
             flash('Title is required', 'error')
             return render_template('post.html')
 
-        is_allowed, moderation_message = moderate_content(title + " " + content)
-        if not is_allowed:
-            flash(f'Your post may violate community guidelines: {moderation_message}. Please review and revise your content.', 'error')
-            return render_template('post.html', title=title, content=content, hashtags=hashtags)
+     #   is_allowed, moderation_message = moderate_content(title + " " + content)
+      #  if not is_allowed:
+       #     flash(f'Your post may violate community guidelines: {moderation_message}. Please review and revise your content.', 'error')
+        #   return render_template('post.html', title=title, content=content, hashtags=hashtags)
         
         if image and allowed_file(image.filename):
             filename = secure_filename(image.filename)
