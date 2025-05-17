@@ -639,19 +639,19 @@ def comment(post_id):
     content = request.form['content']
     #is_allowed, moderation_message = moderate_content(content)
     #if is_allowed:
-        new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
-        db.session.add(new_comment)
-        db.session.commit()
-        notify_user(post.author, f"{current_user.username} commented on your post.")
-        return jsonify({
-            'status': 'success', 
-            'comment': {
-                'id': new_comment.id, 
-                'content': new_comment.content, 
-                'author': current_user.username,
-                'date_posted': new_comment.date_posted.strftime('%Y-%m-%d %H:%M %Z')
-            }
-        })
+    new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
+    db.session.add(new_comment)
+    db.session.commit()
+    notify_user(post.author, f"{current_user.username} commented on your post.")
+    return jsonify({
+        'status': 'success', 
+        'comment': {
+            'id': new_comment.id, 
+            'content': new_comment.content, 
+            'author': current_user.username,
+            'date_posted': new_comment.date_posted.strftime('%Y-%m-%d %H:%M %Z')
+         }
+    })
     #else:
        # return jsonify({
          #   'status': 'error', 
@@ -667,18 +667,18 @@ def reply_to_comment(comment_id):
     
    # is_allowed, moderation_message = moderate_content(content)
     #if is_allowed:
-        comment = Comment.query.get_or_404(comment_id)
-        reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
-        db.session.add(reply)
-        db.session.commit()
+    comment = Comment.query.get_or_404(comment_id)
+    reply = CommentReply(content=content, user_id=current_user.id, comment_id=comment_id)
+    db.session.add(reply)
+    db.session.commit()
         
-        return jsonify({
-            'status': 'success',
-            'id': reply.id,
-            'content': reply.content,
-            'timestamp': reply.date_posted.strftime('%Y-%m-%d %H:%M:%S'),
-            'username': current_user.username
-        }), 201
+    return jsonify({
+         'status': 'success',
+         'id': reply.id,
+         'content': reply.content,
+         'timestamp': reply.date_posted.strftime('%Y-%m-%d %H:%M:%S'),
+         'username': current_user.username
+      }), 201
     #else:
     #    return jsonify({'status': 'error', 'message': f'Your reply may violate community guidelines: {moderation_message}. Please review and revise your content.'})
 
